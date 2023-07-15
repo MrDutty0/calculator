@@ -1,0 +1,30 @@
+body {
+    font-family: Arial, sans-serif;
+    font-size: 2.5rem;
+    text-align: center;
+    color: #FFFFFF;
+    background-color: #F2F2F2;
+
+    margin: 0;
+    padding: 0;
+    height: 100%;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#calculator-body {
+    display: flex;
+    flex-direction: column;
+}
+/* add height, width to screen wraper */
+
+#keyboard-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.keyboard-row {
+    display: flex;
+}
