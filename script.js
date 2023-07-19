@@ -1,3 +1,6 @@
+let enteredNumber = 0;
+let enteredExpression = []
+
 listen();
 
 function listen() {
@@ -58,4 +61,46 @@ function getEventKey(event) {
         "ArrowUp": "+/-"
     };
     return keyCode in keyCodeToAction ? keyCodeToAction[keyCode] : false;
+}
+
+function processAction(action) {
+    if(Number.isInteger(+action)) {
+        addNumberToScreen(+action);
+    }
+
+    // const calculatorActionMap = {
+    //     "⌫",
+    //     ".",
+    //     ",",
+    //     "=",
+    //     "-",
+    //     "/",
+    //     "+",
+    //     "+/-"
+    // }
+}
+
+function addNumberToScreen(number) {
+    const newNum = makeNewNumber(number);
+    
+    // if the number is too big for normal notation
+    newNum >= 1e11 ? displayToMainScreen(toExpo(newNum, 2)) : displayToMainScreen(newNum);
+
+    enteredNumber = newNum;
+}
+
+function makeNewNumber(number) {
+    if(enteredNumber === 0) return number;
+
+    const newNum = (enteredNumber) * 10 + number;
+    return newNum;
+}
+
+function toExpo(x, f) {
+    return Number.parseFloat(x).toExponential(f)
+}
+
+function displayToMainScreen(input) {
+    const screen = document.getElementById("entered");
+    screen.textContent = input;
 }
