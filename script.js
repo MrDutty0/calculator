@@ -1,6 +1,8 @@
 let enteredNumber = 0;
 let enteredExpression = []
 
+const NUMBER_LIMIT = 1e48;
+
 listen();
 
 function listen() {
@@ -82,6 +84,7 @@ function processAction(action) {
 
 function addNumberToScreen(number) {
     const newNum = makeNewNumber(number);
+    if(isNumberExceedingLimit(newNum)) return;
     
     // if the number is too big for normal notation
     newNum >= 1e11 ? displayToMainScreen(toExpo(newNum, 2)) : displayToMainScreen(newNum);
@@ -100,7 +103,37 @@ function toExpo(x, f) {
     return Number.parseFloat(x).toExponential(f)
 }
 
+function isNumberExceedingLimit(x) {
+    const stringNumber = x.toString();
+
+    if(x >= NUMBER_LIMIT) {
+        throwError(`Number limit (${NUMBER_LIMIT}) exceeded`);
+        return true;
+    } else if (stringNumber.length >= 48) {
+        throwError(`Character length limit (${NUMBER_LIMIT.toString().length}) exceeded`);
+        return true;
+    } else if (stringNumber.slice(stringNumber.split().indexOf(".")).length > 5) { //if there are more than 5 numbers after the decimal point
+        throwError(`Exceeded number limit (5) after the decimal point`);
+        return;
+    }
+
+    return false;
+}
+
 function displayToMainScreen(input) {
     const screen = document.getElementById("entered");
     screen.textContent = input;
+}
+
+function throwError(errorMessage) {
+    const screen = document.getElementById("entered");
+    const previousText = screen.textContent;
+    
+    screen.classList.add("error-message");
+    screen.textContent = errorMessage;
+
+    setTimeout(() => {
+        screen.classList.remove("error-message");
+        screen.textContent = previousText;
+    }, 1.25 * 1000);
 }

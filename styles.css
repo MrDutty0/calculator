@@ -65,7 +65,8 @@ body {
     color: #A8B2D1;
 }
 
-#entered {
+#entered,
+.error-message {
     font-size: 5rem;
 }
 
@@ -99,4 +100,9 @@ body {
 
 button:hover {
     background-color: #265E90;
+}
+
+#entered.error-message {
+    color: #E63946;
+    font-size: 2.5rem;
 }
