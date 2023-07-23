@@ -75,12 +75,12 @@ function processAction(action) {
     const calculatorActionMap = {
         "⌫": deleteLastDigit,
         ".": addDot,
-        // "=",
-        // "-",
-        // "×",
-        // "/",
-        // "+",
-        // "+/-"
+        // "=", //calculate()
+        "-": () => addSignToCalculate("-"),
+        "×": () => addSignToCalculate("*"),
+        "÷": () => addSignToCalculate("/"),
+        "+": () => addSignToCalculate("+"),
+        "+/-": changeSign
     }
     if (action in calculatorActionMap) {
         calculatorActionMap[action]();
@@ -151,6 +151,12 @@ function deleteLastDigit() {
     // Get the whole number except the last element
     const stringNumber = enteredNumber.toString();
 
+    if(stringNumber.length === 2 && stringNumber[0] === "-") {
+        enteredNumber = 0;
+        displayToMainScreen(0);
+        return;
+    }
+
     const indexOfDot = stringNumber.indexOf(".");
     if (isDotAdded) {
         if (indexOfDot === -1) {
@@ -199,4 +205,38 @@ function transformIntoCorrectForm(number) {
     }
 
     return numberToDisplay;
+}
+
+function changeSign() {
+    if(enteredNumber === 0) return;
+
+    enteredNumber *= -1;
+    displayToMainScreen(transformIntoCorrectForm(enteredNumber));
+}
+
+function addSignToCalculate(sign) {
+    enteredExpression.push(enteredNumber, sign);
+    enteredNumber = 0;
+    displayToMainScreen(0);
+
+    reloadCalculationScreen();
+}
+
+function reloadCalculationScreen() {
+    let calculationText = "";
+
+    enteredExpression.forEach(item => {
+        if(!isNaN(+item)) {
+            if(item < 0) {
+                calculationText += `(${transformIntoCorrectForm(item)}) `;
+            } else {
+                calculationText += transformIntoCorrectForm(item) + " ";
+            }
+        } else {
+            calculationText += item + " ";
+        }
+    });
+
+    const historyElement = document.querySelector("#history");
+    historyElement.textContent = calculationText;
 }
