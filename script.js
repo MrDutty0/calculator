@@ -1,14 +1,15 @@
 let enteredNumber = 0;
-let enteredExpression = []
+let enteredExpression = [];
+let isDotAdded = false;
 
-const NUMBER_LIMIT = 1e48;
+const NUMBER_LIMIT = Number.MAX_SAFE_INTEGER;
 
 listen();
 
 function listen() {
     document.addEventListener("keydown", (event) => {
         const keyAction = getEventKey(event)
-        if (keyAction){ //if valid key was pressed and acknowledged
+        if (keyAction !== null){ //if valid key was pressed and acknowledged
             processAction(keyAction);
         }
     });
@@ -25,6 +26,7 @@ function getEventKey(event) {
     const keyCode = event.code;
 
     const keyCodeToAction = {
+        "ArrowUp": "+/-",
         "Backspace": "⌫",
         "Comma": ".",
         "Delete": "CE",
@@ -59,62 +61,69 @@ function getEventKey(event) {
         "NumpadSubtract": "-",
         "NumpadAdd": "+",
         "Period": ".",
-        "Slash": "/",
-        "ArrowUp": "+/-"
+        "Slash": "/"
     };
-    return keyCode in keyCodeToAction ? keyCodeToAction[keyCode] : false;
+    return keyCode in keyCodeToAction ? keyCodeToAction[keyCode] : null;
 }
 
 function processAction(action) {
-    if(Number.isInteger(+action)) {
+    if (Number.isInteger(+action)) {
         addNumberToScreen(+action);
+        return;
     }
 
-    // const calculatorActionMap = {
-    //     "⌫",
-    //     ".",
-    //     ",",
-    //     "=",
-    //     "-",
-    //     "/",
-    //     "+",
-    //     "+/-"
-    // }
+    const calculatorActionMap = {
+        "⌫": deleteLastDigit,
+        ".": addDot,
+        // "=",
+        // "-",
+        // "×",
+        // "/",
+        // "+",
+        // "+/-"
+    }
+    if (action in calculatorActionMap) {
+        calculatorActionMap[action]();
+    }
 }
 
 function addNumberToScreen(number) {
     const newNum = makeNewNumber(number);
-    if(isNumberExceedingLimit(newNum)) return;
-    
-    // if the number is too big for normal notation
-    newNum >= 1e11 ? displayToMainScreen(toExpo(newNum, 2)) : displayToMainScreen(newNum);
+    if (isNumberExceedingLimit(newNum)) return;
+
+    displayToMainScreen(transformIntoCorrectForm(newNum));
 
     enteredNumber = newNum;
 }
 
 function makeNewNumber(number) {
-    if(enteredNumber === 0) return number;
+    if (enteredNumber === 0) return number;
 
-    const newNum = (enteredNumber) * 10 + number;
-    return newNum;
+    if (isDotAdded) {
+        if (Number.isInteger(enteredNumber)) {
+            return +(`${enteredNumber}.${number}`);
+        }
+    }
+
+    return +(`${enteredNumber}${number}`);
 }
 
-function toExpo(x, f) {
-    return Number.parseFloat(x).toExponential(f)
+function toExpo(x) {
+    return Number.parseFloat(x).toExponential(2)
 }
 
 function isNumberExceedingLimit(x) {
     const stringNumber = x.toString();
 
-    if(x >= NUMBER_LIMIT) {
-        throwError(`Number limit (${NUMBER_LIMIT}) exceeded`);
+    if (x >= NUMBER_LIMIT) {
+        showError(`Number limit (${toExpo(NUMBER_LIMIT)}) exceeded`);
         return true;
-    } else if (stringNumber.length >= 48) {
-        throwError(`Character length limit (${NUMBER_LIMIT.toString().length}) exceeded`);
+    } else if (stringNumber.length > 15) {
+        showError(`Character length limit (${NUMBER_LIMIT.toString().length}) exceeded`);
         return true;
-    } else if (stringNumber.slice(stringNumber.split().indexOf(".")).length > 5) { //if there are more than 5 numbers after the decimal point
-        throwError(`Exceeded number limit (5) after the decimal point`);
-        return;
+    } else if (stringNumber.slice(stringNumber.indexOf(".")).length > 6) { //if there are more than 5 numbers after the decimal point
+        showError(`Exceeded number limit (5) after the decimal point`);
+        return true;
     }
 
     return false;
@@ -125,15 +134,69 @@ function displayToMainScreen(input) {
     screen.textContent = input;
 }
 
-function throwError(errorMessage) {
+function showError(errorMessage) {
     const screen = document.getElementById("entered");
-    const previousText = screen.textContent;
+    const previousText = transformIntoCorrectForm(enteredNumber);    
     
-    screen.classList.add("error-message");
     screen.textContent = errorMessage;
+    screen.classList.add("error-message");
 
     setTimeout(() => {
         screen.classList.remove("error-message");
         screen.textContent = previousText;
     }, 1.25 * 1000);
+}
+
+function deleteLastDigit() {
+    // Get the whole number except the last element
+    const stringNumber = enteredNumber.toString();
+
+    const indexOfDot = stringNumber.indexOf(".");
+    if (isDotAdded) {
+        if (indexOfDot === -1) {
+            displayToMainScreen(transformIntoCorrectForm(enteredNumber));
+            isDotAdded = false;
+            return;
+        } 
+    }
+
+    enteredNumber = +stringNumber.slice(0, -1);
+    if (isDotAdded && Number.isInteger(enteredNumber)) {
+        displayToMainScreen(transformIntoCorrectForm(enteredNumber) + ".")
+        return;
+    }
+    displayToMainScreen(transformIntoCorrectForm(enteredNumber));
+}
+
+function addDot() {
+    if (isDotAdded) return;
+    displayToMainScreen(transformIntoCorrectForm(enteredNumber) + ".");
+    isDotAdded = true;
+}
+
+function transformIntoCorrectForm(number) {
+    const stringNumber = number.toString();
+
+    let numberPartAfterDot;
+    let integerPart;
+
+    if (isDotAdded && stringNumber.includes(".")) {
+        const indexOfDot = stringNumber.indexOf(".");
+
+        numberPartAfterDot = stringNumber.slice(indexOfDot);
+        integerPart = stringNumber.slice(0, indexOfDot);
+    } else {
+        numberPartAfterDot = "";
+        integerPart = number;
+    }
+
+    let numberToDisplay;
+
+    if (stringNumber.length >= 11) {
+        numberToDisplay = toExpo(integerPart) + numberPartAfterDot;
+    } else {
+        numberToDisplay = number;
+    }
+
+    return numberToDisplay;
 }
