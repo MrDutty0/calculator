@@ -227,10 +227,11 @@ function reloadCalculationScreen() {
 
     enteredExpression.forEach(item => {
         if(!isNaN(+item)) {
-            if(item < 0) {
-                calculationText += `(${transformIntoCorrectForm(item)}) `;
+            const number = item;
+            if(number < 0) {
+                calculationText += `(${transformIntoCorrectForm(number)}) `;
             } else {
-                calculationText += transformIntoCorrectForm(item) + " ";
+                calculationText += transformIntoCorrectForm(number) + " ";
             }
         } else {
             calculationText += item + " ";
@@ -239,4 +240,13 @@ function reloadCalculationScreen() {
 
     const historyElement = document.querySelector("#history");
     historyElement.textContent = calculationText;
+
+    scrollMaxRigth();
+}
+
+function scrollMaxRigth() {
+    const scrollableElement = document.querySelector("#history");
+
+    const scrollDistanceToLeft = scrollableElement.scrollWidth - scrollableElement.clientWidth;
+    scrollableElement.scrollLeft = scrollDistanceToLeft;
 }
