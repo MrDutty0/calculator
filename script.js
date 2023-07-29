@@ -80,7 +80,9 @@ function processAction(action) {
         "×": () => addSignToCalculate("*"),
         "÷": () => addSignToCalculate("/"),
         "+": () => addSignToCalculate("+"),
-        "+/-": changeSign
+        "+/-": changeSign,
+        "CE": () => clearNumber(clearEverything = false),
+        "C": () => clearNumber(clearEverything = true),
     }
     if (action in calculatorActionMap) {
         calculatorActionMap[action]();
@@ -249,4 +251,16 @@ function scrollMaxRigth() {
 
     const scrollDistanceToLeft = scrollableElement.scrollWidth - scrollableElement.clientWidth;
     scrollableElement.scrollLeft = scrollDistanceToLeft;
+}
+
+function clearNumber(clearEverything = false) {
+    const inputScreen = document.getElementById("entered");
+    inputScreen.textContent = "0";
+    enteredNumber = 0;
+
+    if(clearEverything) {
+        const history = document.querySelector("#history");
+        history.textContent = "";
+        enteredExpression = [];
+    }
 }
