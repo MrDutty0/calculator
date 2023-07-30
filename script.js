@@ -1,6 +1,7 @@
 let enteredNumber = 0;
 let enteredExpression = [];
 let isDotAdded = false;
+let errorInCalculationOccurred = false;
 
 const NUMBER_LIMIT = Number.MAX_SAFE_INTEGER;
 
@@ -54,14 +55,14 @@ function getEventKey(event) {
         "Numpad8": 8,
         "Numpad9": 9,
         "NumpadDecimal": ".",
-        "NumpadDivide": "/",
+        "NumpadDivide": "÷",
         "NumpadEnter": "=",
         "Enter": "=",
         "NumpadMultiply": "×",
         "NumpadSubtract": "-",
         "NumpadAdd": "+",
         "Period": ".",
-        "Slash": "/"
+        "Slash": "÷"
     };
     return keyCode in keyCodeToAction ? keyCodeToAction[keyCode] : null;
 }
@@ -75,14 +76,14 @@ function processAction(action) {
     const calculatorActionMap = {
         "⌫": deleteLastDigit,
         ".": addDot,
-        // "=", //calculate()
+        "=": calculate,
         "-": () => addSignToCalculate("-"),
         "×": () => addSignToCalculate("*"),
         "÷": () => addSignToCalculate("/"),
         "+": () => addSignToCalculate("+"),
         "+/-": changeSign,
-        "CE": () => clearNumber(clearEverything = false),
-        "C": () => clearNumber(clearEverything = true),
+        "CE": () => clearInput(clearEverything = false),
+        "C": () => clearInput(clearEverything = true),
     }
     if (action in calculatorActionMap) {
         calculatorActionMap[action]();
@@ -117,18 +118,27 @@ function toExpo(x) {
 function isNumberExceedingLimit(x) {
     const stringNumber = x.toString();
 
+    let [firstPart, secondPart] = stringNumber.split(".");
+    firstPart = transformIntoCorrectForm(firstPart);
+    secondPart = secondPart ? "." + secondPart : "";
+
+    let numberLength = firstPart.length + secondPart.length;
+
+    let isError = false;
+
     if (x >= NUMBER_LIMIT) {
         showError(`Number limit (${toExpo(NUMBER_LIMIT)}) exceeded`);
-        return true;
-    } else if (stringNumber.length > 15) {
-        showError(`Character length limit (${NUMBER_LIMIT.toString().length}) exceeded`);
-        return true;
-    } else if (stringNumber.slice(stringNumber.indexOf(".")).length > 6) { //if there are more than 5 numbers after the decimal point
+        isError = true;
+    } else if (numberLength > 12) {
+        showError("Exceeded number length limit (11)");
+        isError = true;
+    } 
+    else if (secondPart.length > 6) { //if there are more than 5 numbers after the decimal point
         showError(`Exceeded number limit (5) after the decimal point`);
-        return true;
+        isError = true;
     }
 
-    return false;
+    return isError;
 }
 
 function displayToMainScreen(input) {
@@ -153,7 +163,7 @@ function deleteLastDigit() {
     // Get the whole number except the last element
     const stringNumber = enteredNumber.toString();
 
-    if(stringNumber.length === 2 && stringNumber[0] === "-") {
+    if (stringNumber.length === 2 && stringNumber[0] === "-") {
         enteredNumber = 0;
         displayToMainScreen(0);
         return;
@@ -185,28 +195,14 @@ function addDot() {
 function transformIntoCorrectForm(number) {
     const stringNumber = number.toString();
 
-    let numberPartAfterDot;
-    let integerPart;
+    let [firstPart, secondPart] = stringNumber.split(".");
+    secondPart = secondPart ? "." + secondPart : "";
 
-    if (isDotAdded && stringNumber.includes(".")) {
-        const indexOfDot = stringNumber.indexOf(".");
-
-        numberPartAfterDot = stringNumber.slice(indexOfDot);
-        integerPart = stringNumber.slice(0, indexOfDot);
-    } else {
-        numberPartAfterDot = "";
-        integerPart = number;
+    if(firstPart.length + secondPart.length >= 11) {
+        firstPart = toExpo(firstPart);
     }
 
-    let numberToDisplay;
-
-    if (stringNumber.length >= 11) {
-        numberToDisplay = toExpo(integerPart) + numberPartAfterDot;
-    } else {
-        numberToDisplay = number;
-    }
-
-    return numberToDisplay;
+    return firstPart + secondPart;
 }
 
 function changeSign() {
@@ -217,9 +213,14 @@ function changeSign() {
 }
 
 function addSignToCalculate(sign) {
-    enteredExpression.push(enteredNumber, sign);
-    enteredNumber = 0;
-    displayToMainScreen(0);
+    if (enteredNumber == 0) {
+        enteredExpression.pop();
+        enteredExpression.push(sign);
+    } else {
+        enteredExpression.push(enteredNumber, sign);
+        enteredNumber = 0;
+        displayToMainScreen(0);
+    }
 
     reloadCalculationScreen();
 }
@@ -228,9 +229,9 @@ function reloadCalculationScreen() {
     let calculationText = "";
 
     enteredExpression.forEach(item => {
-        if(!isNaN(+item)) {
+        if (!isNaN(+item)) {
             const number = item;
-            if(number < 0) {
+            if (number < 0) {
                 calculationText += `(${transformIntoCorrectForm(number)}) `;
             } else {
                 calculationText += transformIntoCorrectForm(number) + " ";
@@ -253,7 +254,7 @@ function scrollMaxRigth() {
     scrollableElement.scrollLeft = scrollDistanceToLeft;
 }
 
-function clearNumber(clearEverything = false) {
+function clearInput(clearEverything = false) {
     const inputScreen = document.getElementById("entered");
     inputScreen.textContent = "0";
     enteredNumber = 0;
@@ -263,4 +264,81 @@ function clearNumber(clearEverything = false) {
         history.textContent = "";
         enteredExpression = [];
     }
+}
+
+function calculate() { 
+    prepareLastNumberForCalculation();
+
+    // Order of operations
+    evaluate("/");
+    evaluate("*");
+
+    evaluate("-");
+    evaluate("+");
+    if(errorInCalculationOccurred) {
+        enteredExpression.pop();
+        return;
+    };
+
+    const result = enteredExpression[0];
+    clearInput(clearEverything = true);
+
+    enteredNumber = numberToFixed(result, 5);
+
+    displayToMainScreen(transformIntoCorrectForm(enteredNumber));
+}
+
+function prepareLastNumberForCalculation() {
+    if (enteredNumber == 0) {
+        enteredExpression.pop();
+    } else {
+        enteredExpression.push(enteredNumber);
+    }
+}
+
+function evaluate(operator) {
+    let indexOfOperator = enteredExpression.indexOf(operator);
+
+    while (isElementFound(indexOfOperator)) {
+        const firstOperand = enteredExpression[indexOfOperator - 1];
+        const secondOperand = enteredExpression[indexOfOperator + 1];
+        const operator = enteredExpression[indexOfOperator];
+
+        const result = getResult(firstOperand, secondOperand, operator);
+
+        const fixedNumber = numberToFixed(result, 5);
+        if (isNumberExceedingLimit(fixedNumber)) {
+            errorInCalculationOccurred = true;
+            return
+        } else errorInCalculationOccurred = false;
+
+        //remove the operands and the operator. In their place put the result
+        enteredExpression.splice(indexOfOperator - 1, 3, result);
+
+        indexOfOperator = enteredExpression.indexOf(operator);
+    }
+}
+
+function isElementFound(index) {
+    return index >= 0;
+}
+
+function getResult(a, b, operator) {
+    switch (operator) {
+        case "/":
+            return a / b;
+
+        case "*":
+            return a * b;
+
+        case "-":
+            return a - b;
+
+        case "+":
+            return a + b;
+    }
+}
+
+function numberToFixed(number, afterPoint) {
+    return +Number.parseFloat(number).toFixed(afterPoint);
 }
